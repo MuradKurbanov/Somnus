@@ -5,7 +5,7 @@ Somnus — это инструмент цифрового самоконтрол
 
 ## 🎯 Концепция  
 В отличие от менеджеров паролей, Somnus защищает данные не от хакеров, а от ваших собственных привычек:  
-* **Изоляция**: Храните здесь пароли от Cloudflare и почт, чтобы не иметь возможности мгновенно изменить настройки.  
+* **Изоляция**: Храните здесь пароли от Cloudflare и почт, чтобы не иметь возможности мгновенно изменить настройки (**Нельзя хранить чувствительные пароли**).  
 * **Анти-срыв**: Окно доступа открывается в `04:00 (Lisbon Time)`. Если вам действительно нужны данные для работы — вы дождетесь утра. Если это минутная слабость — она пройдет.
 
 <br>
@@ -14,25 +14,38 @@ Somnus — это инструмент цифрового самоконтрол
 1. **Создайте Worker** в панели Cloudflare
 2. **Добавьте секреты (Environment Variables)**:
 - `AUTH_PASSWORD`: Ваш токен для авторизации (Bearer)
-- `SCREEN_CODE`: Код экранного времени
-- `CF_PASSWORD`: Пароль от аккаунта Cloudflare
-- `MAIL_PASS_1`, `MAIL_PASS_2`: Пароли от технических почт  
 3. **Rate Limiting**: Подключите `MY_RATE_LIMITER`
 4. **Деплой**: Скопируйте код и разверните через Wrangler.
+5. **KV namespace** С помощью API сохраните пароли:
+- `MAIL_PASSWORD`: Пароли от почт для регистрации в Cloudflare (Лучше создать специально отдельную)
+- `CF_PASSWORD`: Пароль от аккаунта Cloudflare
+- `SCREEN_CODE`: Код экранного времени
 
 <br>
 
-## 🚀 Использование
-Для получения данных отправьте GET-запрос с вашим паролем в заголовке:
+## 🚀 API
 
+TODO: Удалить пароль
 ```bash
-curl https://your-worker-name.workers.dev -H "Authorization: Bearer AUTH_PASSWORD"
+# Получить список всех ключей
+curl -X GET "http://localhost:8787/kv" -H "Authorization: Bearer 1234-4567-7890"
 ```
-### Ответы системы:
-* **200 OK**: Данные получены (доступно только с 04:00 до 05:00)
-* **401 Unauthorized**: Неверный или отсутствующий токен
-* **403 Forbidden**: Доступ запрещен (время еще не пришло)
-* **429 Too Many Requests**: Сработал лимит запросов
+```bash
+# Получить kv по name
+curl -X GET "http://localhost:8787/kv/{name}" -H "Authorization: Bearer 1234-4567-7890"
+```
+```bash
+# Создать новый kv
+curl -X POST "http://localhost:8787/kv" -H "Authorization: Bearer 1234-4567-7890" -H "Content-Type: application/json" -d '{"key":"name", "value":"Cloudflare"}'
+```
+```bash
+# Обновить value в kv по name
+curl -X PUT "http://localhost:8787/kv/{name}" -H "Authorization: Bearer 1234-4567-7890" -H "Content-Type: application/json" -d '{"value":"NewValue"}'
+```
+```bash
+# Удалить kv по name
+curl -X DELETE "http://localhost:8787/kv/{name}" -H "Authorization: Bearer 1234-4567-7890"
+```
 
 <br>
 

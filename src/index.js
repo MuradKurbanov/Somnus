@@ -1,38 +1,24 @@
-import { isAuthorized } from './isAuthorized';
-import { isAllowedTime } from './isAllowedTime';
+import { router } from './router';
+import { response, isRateAllowed, isAllowedTime, isAuthorized } from './utils';
 
 export default {
-  async fetch(request, env) {
-    const limiter = env.MY_RATE_LIMITER;
-
-    if (limiter && typeof limiter.limit === 'function') {
-      const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
-      const { success } = await limiter.limit({ key: `rate:${ip}` });
-
-      if (!success) {
-        return new Response('Too Many Requests', { status: 429 });
-      }
+  async fetch(request, env, ctx) {
+    if (!(await isRateAllowed(request, env))) {
+      return response({ error: 'Too Many Requests' }, 429);
     }
 
     if (!isAuthorized(request, env)) {
-      return new Response('Unauthorized', { status: 401 });
+      return response({ error: 'Unauthorized' }, 401);
     }
 
     if (!isAllowedTime()) {
-      return new Response('Access denied. Available from 04:00 to 05:00 (Lisbon time)', {
-        headers: { 'content-type': 'text/plain' },
-      });
+      return response({ error: 'Access denied. Available from 04:00 to 05:00 (Lisbon time)' }, 403);
     }
 
-    const data = {
-      mail1: env.MAIL_PASS_1,
-      mail2: env.MAIL_PASS_2,
-      cloudflare: env.CF_PASSWORD,
-      screen: env.SCREEN_CODE,
-    };
-
-    return new Response(JSON.stringify(data, null, 2), {
-      headers: { 'content-type': 'application/json' },
-    });
+    try {
+      return await router(request, env, ctx);
+    } catch (e) {
+      return response({ error: 'Internal Server Error' }, 500);
+    }
   },
 };
